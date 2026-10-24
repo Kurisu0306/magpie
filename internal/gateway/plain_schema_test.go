@@ -37,3 +37,27 @@ func TestPlainSchemaKeepsOnlyWhatAntigravityTakes(t *testing.T) {
 		t.Errorf("got %s", b)
 	}
 }
+
+// Google rejects items unless type is exactly ARRAY. A JSON Schema union
+// type:["object","array"] keeps the object branch and must not also keep
+// items (#3370).
+func TestPlainSchemaDropsItemsOnObjectUnion(t *testing.T) {
+	in := `{"type":["object","array"],"description":"Tool params as a real JSON object","items":{"type":"string"},"properties":{}}`
+	var got map[string]any
+	if err := json.Unmarshal(plainSchema(json.RawMessage(in)), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["type"] != "object" {
+		t.Fatalf("type = %v, want object", got["type"])
+	}
+	if _, ok := got["items"]; ok {
+		t.Fatalf("items kept on an object schema: %#v", got)
+	}
+	props, ok := got["properties"].(map[string]any)
+	if !ok || len(props) != 0 {
+		t.Fatalf("properties = %#v", got["properties"])
+	}
+	if got["description"] != "Tool params as a real JSON object" {
+		t.Fatalf("description = %v", got["description"])
+	}
+}

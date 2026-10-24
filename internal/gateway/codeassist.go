@@ -794,6 +794,12 @@ func plainSchema(raw json.RawMessage) json.RawMessage {
 					out["type"] = "array"
 				}
 			}
+			// Google rejects items unless type is exactly ARRAY. A union
+			// type:["object","array"] keeps the first non-null branch, so
+			// items from the array branch must not stay on an object (#3370).
+			if out["type"] != nil && out["type"] != "array" {
+				delete(out, "items")
+			}
 			if req, ok := out["required"].([]any); ok {
 				// required names only the properties there are
 				props, _ := out["properties"].(map[string]any)
